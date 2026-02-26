@@ -1,0 +1,1 @@
+ALTER TABLE employees ADD COLUMN status ENUM('Active', 'Terminated', 'Resigned', 'Contract Ended') NOT NULL DEFAULT 'Active';

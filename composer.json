@@ -1,0 +1,7 @@
+{
+  "name": "your-project/employee-system",
+  "description": "Employee Management Portal",
+  "require": {
+    "dompdf/dompdf": "^3.1"
+  }
+}

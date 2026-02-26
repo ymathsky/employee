@@ -1,0 +1,142 @@
+<!-- FILENAME: employee/login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>Employee Portal Login</title>
+    <!-- Tailwind CSS CDN for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font import for a cleaner look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+<div class="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full">
+    <div class="text-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Welcome</h1>
+        <p class="text-gray-500">Sign in to your account</p>
+    </div>
+
+    <form id="loginForm" class="space-y-4">
+        <div>
+            <!--
+              *** MODIFIED: Changed from 'username' to 'email' ***
+            -->
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <input type="email" id="email" name="email" placeholder="e.g., j.doe@company.com"
+                   class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required autocomplete="email">
+        </div>
+        <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <div class="relative">
+                <input type="password" id="password" name="password" placeholder="••••••••"
+                       class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm pr-10" required autocomplete="current-password">
+                <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <svg id="eyeOffIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.243M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between text-sm">
+            <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">
+                Forgot password?
+            </a>
+        </div>
+
+        <div>
+            <button type="submit"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                Sign in
+            </button>
+        </div>
+    </form>
+
+    <div id="message-box" class="mt-4 hidden p-3 rounded-lg text-center" role="alert"></div>
+</div>
+
+<!-- JavaScript for client-side validation and form submission -->
+<script>
+    const loginForm = document.getElementById('loginForm');
+    const messageBox = document.getElementById('message-box');
+
+    // Toggle Password Visibility
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
+    const eyeOffIcon = document.getElementById('eyeOffIcon');
+
+    if (togglePassword) {
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            eyeIcon.classList.toggle('hidden');
+            eyeOffIcon.classList.toggle('hidden');
+        });
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault(); // Prevent default form submission
+
+        // *** MODIFIED: Get 'email' from the form ***
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        // Simple client-side validation
+        if (!email || !password) {
+            showMessage('Email and password are required.', 'bg-red-100 text-red-700');
+            return;
+        }
+
+        try {
+            const response = await fetch('api/login.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                // *** MODIFIED: Send 'email' instead of 'username' ***
+                body: JSON.stringify({ email, password })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showMessage('Login successful! Redirecting...', 'bg-green-100 text-green-700');
+                setTimeout(() => {
+                    window.location.href = result.redirect;
+                }, 1000);
+            } else {
+                showMessage(result.message, 'bg-red-100 text-red-700');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            // Check if the error is due to parsing HTML (like a 404 page)
+            if (error instanceof SyntaxError) {
+                showMessage('An error occurred. Could not connect to the server.', 'bg-red-100 text-red-700');
+            } else {
+                showMessage('An error occurred. Please try again later.', 'bg-red-100 text-red-700');
+            }
+        }
+    });
+
+    function showMessage(message, className) {
+        messageBox.textContent = message;
+        messageBox.className = `mt-4 p-3 rounded-lg text-center ${className}`;
+        messageBox.classList.remove('hidden');
+    }
+</script>
+</body>
+</html>
+

@@ -11,6 +11,28 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once 'db_connect.php';
 
+// Mobile: return full employee list when ?all=1 is passed (HR Admin / Super Admin only)
+if (isset($_GET['all']) && $_GET['all'] == '1') {
+    if ($_SESSION['role'] !== 'HR Admin' && $_SESSION['role'] !== 'Super Admin') {
+        echo json_encode(['success' => false, 'message' => 'Forbidden']);
+        exit;
+    }
+    try {
+        $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.email,
+                       e.job_title, e.department, e.status, e.hired_date,
+                       e.profile_picture_url, u.role
+                FROM employees e
+                JOIN users u ON e.employee_id = u.employee_id
+                ORDER BY e.last_name, e.first_name";
+        $stmt = $pdo->query($sql);
+        $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'employees' => $employees]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Database error.']);
+    }
+    exit;
+}
+
 $employee_id = $_GET['id'] ?? null;
 
 if (empty($employee_id)) {

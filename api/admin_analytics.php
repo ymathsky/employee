@@ -87,7 +87,23 @@ try {
     $stmt_payroll->execute([$last_month_start, $this_month_start]);
     $total_monthly_gross_pay = $stmt_payroll->fetchColumn() ?? 0;
 
-    // --- Metric 6: Total Pending Mandatory Training (Safe Query) ---
+    // --- Metric 6: Present Today ---
+    $sql_present = "SELECT COUNT(DISTINCT employee_id) FROM attendance_logs WHERE DATE(time_in) = CURDATE()";
+    $present_today = (int)$pdo->query($sql_present)->fetchColumn();
+
+    // --- Metric 7: On Leave Today ---
+    $sql_on_leave = "SELECT COUNT(DISTINCT employee_id) FROM leave_requests WHERE status = 'Approved' AND CURDATE() BETWEEN start_date AND end_date";
+    $on_leave_today = (int)$pdo->query($sql_on_leave)->fetchColumn();
+
+    // --- Metric 8: Unpaid Payrolls ---
+    $sql_unpaid = "SELECT COUNT(*) FROM payroll WHERE status = 'unpaid'";
+    $unpaid_payrolls = (int)$pdo->query($sql_unpaid)->fetchColumn();
+
+    // --- Metric 9: Latest Announcements ---
+    $sql_anno = "SELECT announcement_id, title, message, created_at FROM announcements ORDER BY created_at DESC LIMIT 5";
+    $announcements = $pdo->query($sql_anno)->fetchAll(PDO::FETCH_ASSOC);
+
+    // --- Metric 10: Total Pending Mandatory Training (Safe Query) ---
     // Safely check for tables before running the query
     $pending_training_count = 0;
     if (tableExists($pdo, 'employee_training') && tableExists($pdo, 'training_courses')) {
@@ -112,6 +128,11 @@ try {
         // Display the period used for the payroll calculation
         'payroll_period' => date('F Y', strtotime('last month')),
         'pending_training_count' => $pending_training_count,
+        'present_today'           => $present_today,
+        'on_leave_today'          => $on_leave_today,
+        'unpaid_payrolls'         => $unpaid_payrolls,
+        'pending_leave'           => $pending_leave_count,
+        'announcements'           => $announcements,
     ];
 
     log_action($pdo, $_SESSION['user_id'], 'ADMIN_ANALYTICS_VIEWED', 'Admin loaded company-wide analytics dashboard.');

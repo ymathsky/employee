@@ -15,9 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Configuration for your database connection
 $host = 'localhost'; // Your database host (e.g., localhost)
-$dbname = 'employee_system'; // The name of your database
-$user = 'root'; // Your database username
-$password = ''; // Your database password
+$dbname = 'mdoffic1_employee_system'; // The name of your database
+$user = 'mdoffic1_user_employment'; // Your database username
+$password = 'I986vUShZnai0YJb'; // Your database password
 
 // Data Source Name (DSN) string
 $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";

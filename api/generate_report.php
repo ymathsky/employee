@@ -74,7 +74,8 @@ try {
                         SUM(p.net_pay) as total_net_pay
                     FROM payroll p
                     LEFT JOIN employees e ON p.employee_id = e.employee_id
-                    WHERE p.pay_period_end BETWEEN ? AND ?";
+                    WHERE p.pay_period_end BETWEEN ? AND ?
+                    AND e.status = 'Active'";
             $sql_params[] = $start_date;
             $sql_params[] = $end_date;
 
@@ -115,7 +116,8 @@ try {
                         p.deductions as total_deductions
                     FROM payroll p
                     JOIN employees e ON p.employee_id = e.employee_id
-                    WHERE p.pay_period_end BETWEEN ? AND ?";
+                    WHERE p.pay_period_end BETWEEN ? AND ?
+                    AND e.status = 'Active'";
             
             $sql_params = [$start_date, $end_date];
 
@@ -176,11 +178,11 @@ try {
             $report_title = "Attendance Summary (" . date('M j, Y', strtotime($start_date)) . " - " . date('M j, Y', strtotime($end_date)) . ")";
             $headers = ['Employee Name', 'Department', 'Total Logs', 'Total Recorded Hours', 'Total Leave Days', 'Average Hours Per Log'];
 
-            // 1. Get all relevant employees first
-            $sql_emp = "SELECT employee_id, first_name, last_name, department FROM employees";
+            // 1. Get all relevant employees first (Active only)
+            $sql_emp = "SELECT employee_id, first_name, last_name, department FROM employees WHERE status = 'Active'";
             $emp_params = [];
             if ($department_filter !== 'all') {
-                $sql_emp .= " WHERE department LIKE ?";
+                $sql_emp .= " AND department LIKE ?";
                 $emp_params[] = "%" . $department_filter . "%";
                 $report_title .= " - Dept: " . htmlspecialchars($department_filter);
             }
@@ -263,10 +265,11 @@ try {
                         COALESCE(lb.sick_days_accrued, " . DEFAULT_SICK_DAYS . ") as sick_accrued,
                         COALESCE(lb.personal_days_accrued, " . DEFAULT_PERSONAL_DAYS . ") as personal_accrued
                     FROM employees e
-                    LEFT JOIN leave_balances lb ON e.employee_id = lb.employee_id";
+                    LEFT JOIN leave_balances lb ON e.employee_id = lb.employee_id
+                    WHERE e.status = 'Active'";
 
             if ($department_filter !== 'all') {
-                $sql .= " WHERE e.department LIKE ?";
+                $sql .= " AND e.department LIKE ?";
                 $sql_params[] = "%" . $department_filter . "%";
                 $report_title .= " - Dept: " . htmlspecialchars($department_filter);
             }

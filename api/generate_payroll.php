@@ -153,6 +153,8 @@ try {
         $worked_hours_pay = 0.00; // Pay from actual work logs
         $leave_pay = 0.00; // Pay from approved leave
         $attendance_deductions = 0.00; // NEW: Track lost pay due to late/absent
+        $total_ot_hours = 0.00; // NEW: Track overtime hours
+        $overtime_pay_amount = 0.00; // NEW: Track overtime pay amount
 
         // Fetch Pay Rate for the period end date
         $pay_data = getEmployeePayRateOnDate($pdo, $employee_id, $end_date);
@@ -351,6 +353,37 @@ try {
                 }
             } // End foreach log loop
 
+            // --- Overtime Calculation ---
+            $total_ot_hours = 0.00;
+            $overtime_pay_amount = 0.00;
+            
+            // Fetch Approved Overtime Requests (per-record to use individual multipliers)
+            $sql_ot = "SELECT hours, multiplier FROM overtime_requests 
+                       WHERE employee_id = ? AND ot_date BETWEEN ? AND ? AND status = 'Approved'";
+            $stmt_ot = $pdo->prepare($sql_ot);
+            $stmt_ot->execute([$employee_id, $start_date, $end_date]);
+            $ot_records = $stmt_ot->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($ot_records)) {
+                // Determine base hourly rate for OT
+                $hourly_rate_for_ot = 0.00;
+                if ($pay_type === 'Daily') {
+                    $hourly_rate_for_ot = $pay_rate / 8; // Standard 8-hour divisor
+                } elseif ($pay_type === 'Hourly') {
+                    $hourly_rate_for_ot = (float)$pay_rate;
+                } elseif ($pay_type === 'Fix Rate') {
+                    $hourly_rate_for_ot = ($pay_rate / 22) / 8; // 22 days/month, 8 hrs/day
+                }
+
+                foreach ($ot_records as $ot_row) {
+                    $ot_hrs = (float)$ot_row['hours'];
+                    $ot_mult = (float)($ot_row['multiplier'] ?? 1.25);
+                    $total_ot_hours += $ot_hrs;
+                    $overtime_pay_amount += round($ot_hrs * $hourly_rate_for_ot * $ot_mult, 2);
+                }
+                $overtime_pay_amount = round($overtime_pay_amount, 2);
+            }
+
             // --- Calculate Leave Pay ---
             if ($total_paid_leave_days > 0) {
                 if ($pay_type === 'Daily') {
@@ -364,7 +397,7 @@ try {
             }
 
             // --- Final Gross Pay for Daily/Hourly ---
-            $gross_pay = round($worked_hours_pay + $leave_pay, 2);
+            $gross_pay = round($worked_hours_pay + $leave_pay + $overtime_pay_amount, 2);
 
         } // End if Fix Rate else block
 
@@ -458,12 +491,12 @@ try {
             // Insert into payroll table
             $sql_insert = "INSERT INTO payroll
                             (employee_id, pay_period_start, pay_period_end, gross_pay, allowances, attendance_deductions, deductions, net_pay, status,
-                             pay_type_used, pay_rate_used, total_payable_hours, total_paid_leave_days)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Processed', ?, ?, ?, ?)";
+                             pay_type_used, pay_rate_used, overtime_hours, overtime_pay, total_payable_hours, total_paid_leave_days)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Processed', ?, ?, ?, ?, ?, ?)";
             $stmt_insert = $pdo->prepare($sql_insert);
             $stmt_insert->execute([
                 $employee_id, $start_date, $end_date, $gross_pay, $allowances_total, $attendance_deductions, $deductions, $net_pay,
-                $pay_type, $pay_rate, round($total_payable_hours, 2), $total_paid_leave_days
+                $pay_type, $pay_rate, $total_ot_hours, $overtime_pay_amount, round($total_payable_hours, 2), $total_paid_leave_days
             ]);
             $payroll_id = $pdo->lastInsertId();
             $total_processed++;

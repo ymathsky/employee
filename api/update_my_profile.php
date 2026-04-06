@@ -51,7 +51,7 @@ try {
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
         $file = $_FILES['profile_picture'];
         // NOTE: Adjusted path for better file system consistency.
-        $upload_dir = __DIR__ . '/../../uploads/profiles/';
+        $upload_dir = __DIR__ . '/../uploads/profiles/';
         $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
         $max_file_size = 2 * 1024 * 1024; // 2MB
 

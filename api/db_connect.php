@@ -1,6 +1,18 @@
 <?php
 // FILENAME: employee/api/db_connect.php
 
+// --- CORS Headers (supports mobile app and browser requests) ---
+$allowed_origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+header("Access-Control-Allow-Origin: $allowed_origin");
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, X-Session-Token, Cookie');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+// --- END CORS ---
+
 // Configuration for your database connection
 $host = 'localhost'; // Your database host (e.g., localhost)
 $dbname = 'employee_system'; // The name of your database

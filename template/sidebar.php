@@ -197,6 +197,11 @@ $current_uri = $_SERVER['REQUEST_URI'];
                                 </a>
                             </li>
                             <li>
+                                <a href="overtime_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'overtime_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
+                                    Overtime Management
+                                </a>
+                            </li>
+                            <li>
                                 <a href="allowance_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'allowance_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
                                     Allowance & Bonus Mgt.
                                 </a>
@@ -437,6 +442,12 @@ $current_uri = $_SERVER['REQUEST_URI'];
                     <span>My QR Code</span>
                 </a>
             </li>
+            <li>
+                <a href="my_virtual_id.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_virtual_id.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
+                    <i class="fas fa-id-card w-5 text-center"></i>
+                    <span>Virtual ID</span>
+                </a>
+            </li>
         </ul>
     </nav>
 
@@ -611,6 +622,11 @@ $current_uri = $_SERVER['REQUEST_URI'];
                             <li>
                                 <a href="deduction_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'deduction_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
                                     Deduction Management
+                                </a>
+                            </li>
+                            <li>
+                                <a href="overtime_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'overtime_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
+                                    Overtime Management
                                 </a>
                             </li>
                             <li>
@@ -853,6 +869,12 @@ $current_uri = $_SERVER['REQUEST_URI'];
                 <a href="my_qr_code.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_qr_code.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
                     <i class="fas fa-qrcode w-5 text-center"></i>
                     <span>My QR Code</span>
+                </a>
+            </li>
+            <li>
+                <a href="my_virtual_id.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_virtual_id.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
+                    <i class="fas fa-id-card w-5 text-center"></i>
+                    <span>Virtual ID</span>
                 </a>
             </li>
         </ul>

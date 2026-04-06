@@ -66,6 +66,12 @@ if (!$payroll_id) {
                     <span class="font-medium text-gray-800" id="totalLeaveDays"></span>
                 </div>
 
+                <!-- NEW: Overtime Info -->
+                <div class="flex justify-between hidden" id="overtimeInfo">
+                    <span class="text-gray-600">Overtime:</span>
+                    <span class="font-medium text-gray-800" id="overtimeAmount"></span>
+                </div>
+
                 <!-- NEW: Allowance Breakdown -->
                 <div id="allowanceBreakdown" class="border-t border-gray-200 pt-2 mt-2 space-y-2 hidden">
                     <h4 class="text-xs font-semibold text-gray-500 uppercase">Allowances / Bonuses</h4>
@@ -309,6 +315,27 @@ if (!$payroll_id) {
                 } else {
                     totalHoursInfo.classList.add('hidden');
                     totalLeaveDaysInfo.classList.add('hidden');
+                }
+
+                // Overtime Logic
+                const overtimeHours = parseFloat(data.overtime_hours || 0);
+                const overtimePay = parseFloat(data.overtime_pay || 0);
+                const overtimeInfo = document.getElementById('overtimeInfo');
+
+                if (overtimeHours > 0) {
+                    // document.getElementById('overtimeAmount').textContent = `${overtimeHours.toFixed(2)} hrs (${formatCurrency(overtimePay)})`; // formatCurrency not available in JS block scope? It is global function in utils or header?
+                    // Wait, formatCurrency is likely defined in this file or header.
+                    // Checking line 250 in read_file output: yes, formatCurrency(potentialBasicPay) is used.
+                    // But wait, formatCurrency is NOT defined in the JS I read. Check earlier read.
+                    // It is defined in reports.php but maybe not here.
+                    // Let's check if formatCurrency is available.
+                    // It's used in line 301: formatCurrency(grossPay). So it must be available.
+                    
+                    const formattedOTPay = (typeof formatCurrency === 'function') ? formatCurrency(overtimePay) : '$' + overtimePay.toFixed(2);
+                    document.getElementById('overtimeAmount').textContent = `${overtimeHours.toFixed(2)} hrs (${formattedOTPay})`;
+                    overtimeInfo.classList.remove('hidden');
+                } else {
+                    overtimeInfo.classList.add('hidden');
                 }
 
                 // --- Populate Deductions ---

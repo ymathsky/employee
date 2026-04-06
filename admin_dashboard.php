@@ -80,6 +80,18 @@ $currency_symbol = $_SESSION['settings']['currency_symbol'] ?? '$';
         </a>
     </div>
 
+    <!-- NEW CARD: Overtime Management -->
+    <div class="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center text-center">
+        <div class="bg-orange-100 p-4 rounded-full mb-4">
+            <i class="fas fa-clock h-10 w-10 text-orange-600 flex items-center justify-center text-2xl"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-gray-800 mb-2">Overtime Mgmt.</h2>
+        <p class="text-gray-600 mb-4">Approve overtime hours for payroll calculation.</p>
+        <a href="overtime_management.php" class="mt-auto bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200">
+            Go to Module
+        </a>
+    </div>
+
     <div class="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center text-center">
         <div class="bg-red-100 p-4 rounded-full mb-4">
             <svg class="h-10 w-10 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

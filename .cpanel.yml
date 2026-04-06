@@ -1,5 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/$USER/public_html/employee
+    - export DEPLOYPATH=/home/mdoffic1/ems.md-officesupport.com
     - /bin/cp -r . $DEPLOYPATH

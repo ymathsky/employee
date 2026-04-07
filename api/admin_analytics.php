@@ -100,7 +100,7 @@ try {
     $unpaid_payrolls = (int)$pdo->query($sql_unpaid)->fetchColumn();
 
     // --- Metric 9: Latest Announcements ---
-    $sql_anno = "SELECT announcement_id, title, message, created_at FROM announcements ORDER BY created_at DESC LIMIT 5";
+        $sql_anno = "SELECT announcement_id, title, content AS message, created_at FROM announcements ORDER BY created_at DESC LIMIT 5";
     $announcements = $pdo->query($sql_anno)->fetchAll(PDO::FETCH_ASSOC);
 
     // --- Metric 10: Total Pending Mandatory Training (Safe Query) ---

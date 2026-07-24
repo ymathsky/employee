@@ -1,888 +1,270 @@
 <?php
 // FILENAME: employee/template/sidebar.php
-// This file is intended to be included by other pages that have already started the session.
-
-// NEW: Include configuration file
 require_once __DIR__ . '/../config/app_config.php';
 
-$is_admin = (isset($_SESSION['role']) && ($_SESSION['role'] === 'HR Admin' || $_SESSION['role'] === 'Super Admin'));
-$is_super_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'Super Admin'); // Specific check for Super Admin
-$is_manager = (isset($_SESSION['role']) && $_SESSION['role'] === 'Manager');
+$is_admin      = isset($_SESSION['role']) && in_array($_SESSION['role'], ['HR Admin', 'Super Admin']);
+$is_super_admin= isset($_SESSION['role']) && $_SESSION['role'] === 'Super Admin';
+$is_manager    = isset($_SESSION['role']) && $_SESSION['role'] === 'Manager';
+$is_leave_manager = isset($_SESSION['role']) && $_SESSION['role'] === 'Leave Manager';
 
 $current_uri = $_SERVER['REQUEST_URI'];
-?>
-<div x-cloak x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-20 bg-black/50 md:hidden print-hide" @click="sidebarOpen = false"></div>
 
+// Helper: render a sidebar link
+function sl($href, $icon, $label, $match_strings, $current_uri, $extra_class = '') {
+    $active = false;
+    foreach ((array)$match_strings as $m) {
+        if (strpos($current_uri, $m) !== false) { $active = true; break; }
+    }
+    $cls = 'sidebar-link' . ($active ? ' active' : '') . ($extra_class ? " $extra_class" : '');
+    echo "<a href=\"{$href}\" class=\"{$cls}\"><i class=\"fas {$icon} icon\"></i><span>{$label}</span></a>";
+}
+
+// Profile picture
+$sidebar_pic_src = !empty($_SESSION['profile_picture_url'])
+    ? '../' . htmlspecialchars($_SESSION['profile_picture_url'])
+    : 'https://placehold.co/40x40/4f46e5/ffffff?text=' . strtoupper(substr($_SESSION['username'] ?? 'U', 0, 1));
+
+$panel_label = $is_super_admin ? 'Super Admin' : ($is_admin ? 'Admin Panel' : ($is_manager ? 'Manager Panel' : ($is_leave_manager ? 'Leave Manager' : 'Employee Portal')));
+?>
+
+<!-- Mobile overlay -->
+<div x-cloak x-show="sidebarOpen" x-transition.opacity
+     class="fixed inset-0 z-20 bg-black/60 md:hidden print-hide"
+     @click="sidebarOpen = false"></div>
+
+<?php
+// Build the nav content once as a variable to avoid duplication between mobile/desktop
+ob_start();
+?>
+<div class="flex items-center gap-3 px-4 py-5 border-b border-white/10">
+    <img src="<?php echo $sidebar_pic_src; ?>" alt=""
+         class="w-10 h-10 rounded-xl object-cover ring-2 ring-white/20 flex-shrink-0">
+    <div class="min-w-0">
+        <p class="text-sm font-bold text-white truncate"><?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?></p>
+        <p class="text-xs text-indigo-300 truncate"><?php echo htmlspecialchars($_SESSION['role'] ?? 'User'); ?></p>
+    </div>
+</div>
+
+<nav class="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+
+<?php if ($is_admin || $is_super_admin): ?>
+
+    <?php sl('admin_dashboard.php', 'fa-house', 'Dashboard', 'admin_dashboard.php', $current_uri); ?>
+
+    <p class="sidebar-section">People</p>
+    <?php
+    $is_emp = strpos($current_uri, 'employee_management.php') !== false
+           || strpos($current_uri, 'add_employee_page.php') !== false
+           || strpos($current_uri, 'view_employee_profile.php') !== false
+           || strpos($current_uri, 'edit_employee_page.php') !== false;
+    ?>
+    <div x-data="{ open: <?php echo $is_emp ? 'true' : 'false'; ?> }">
+        <button @click="open = !open"
+                class="sidebar-link w-full <?php echo $is_emp ? 'active' : ''; ?>">
+            <i class="fas fa-users icon"></i><span class="flex-1 text-left">Employees</span>
+            <i class="fas fa-chevron-right text-xs transition-transform" :class="open ? 'rotate-90' : ''"></i>
+        </button>
+        <div x-show="open" x-collapse class="ml-4 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
+            <?php sl('employee_management.php',  'fa-list',       'Employee List',  'employee_management.php',  $current_uri); ?>
+            <?php sl('add_employee_page.php',    'fa-user-plus',  'Add Employee',   'add_employee_page.php',    $current_uri); ?>
+            <?php if (strpos($current_uri, 'view_employee_profile.php') !== false) sl('#', 'fa-eye', 'View Profile', '', $current_uri); ?>
+            <?php if (strpos($current_uri, 'edit_employee_page.php')    !== false) sl('#', 'fa-pencil', 'Edit Profile', '', $current_uri); ?>
+        </div>
+    </div>
+    <?php sl('department_management.php', 'fa-building', 'Departments', 'department_management.php', $current_uri); ?>
+
+    <p class="sidebar-section">Operations</p>
+    <?php
+    $is_journal_a = strpos($current_uri, 'log_journal.php') !== false
+                 || strpos($current_uri, 'my_journal.php') !== false
+                 || strpos($current_uri, 'journal_management.php') !== false;
+    ?>
+    <div x-data="{ open: <?php echo $is_journal_a ? 'true' : 'false'; ?> }">
+        <button @click="open = !open" class="sidebar-link w-full <?php echo $is_journal_a ? 'active' : ''; ?>">
+            <i class="fas fa-trophy icon"></i><span class="flex-1 text-left">Performance</span>
+            <i class="fas fa-chevron-right text-xs transition-transform" :class="open ? 'rotate-90' : ''"></i>
+        </button>
+        <div x-show="open" x-collapse class="ml-4 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
+            <?php sl('log_journal.php',       'fa-pen',       'Log Entry',          'log_journal.php',       $current_uri); ?>
+            <?php sl('my_journal.php',        'fa-book-open', 'My Journal',         'my_journal.php',        $current_uri); ?>
+            <?php sl('journal_management.php','fa-list-check','Journal Management', 'journal_management.php',$current_uri); ?>
+        </div>
+    </div>
+
+    <?php
+    $is_sched = strpos($current_uri, 'standard_schedule.php') !== false
+             || strpos($current_uri, 'schedule_management.php') !== false;
+    ?>
+    <div x-data="{ open: <?php echo $is_sched ? 'true' : 'false'; ?> }">
+        <button @click="open = !open" class="sidebar-link w-full <?php echo $is_sched ? 'active' : ''; ?>">
+            <i class="fas fa-calendar-alt icon"></i><span class="flex-1 text-left">Scheduling</span>
+            <i class="fas fa-chevron-right text-xs transition-transform" :class="open ? 'rotate-90' : ''"></i>
+        </button>
+        <div x-show="open" x-collapse class="ml-4 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
+            <?php sl('standard_schedule.php', 'fa-calendar-check','Standard Schedules',  'standard_schedule.php',  $current_uri); ?>
+            <?php sl('schedule_management.php','fa-calendar-xmark','Schedule Exceptions', 'schedule_management.php', $current_uri); ?>
+        </div>
+    </div>
+
+    <p class="sidebar-section">Finance</p>
+    <?php
+    $is_pay = strpos($current_uri, 'payroll.php') !== false
+           || strpos($current_uri, 'deduction_management.php') !== false
+           || strpos($current_uri, 'allowance_management.php') !== false
+           || strpos($current_uri, 'pay_history_management.php') !== false
+           || strpos($current_uri, 'ca_management.php') !== false
+           || strpos($current_uri, 'overtime_management.php') !== false;
+    ?>
+    <div x-data="{ open: <?php echo $is_pay ? 'true' : 'false'; ?> }">
+        <button @click="open = !open" class="sidebar-link w-full <?php echo $is_pay ? 'active' : ''; ?>">
+            <i class="fas fa-coins icon"></i><span class="flex-1 text-left">Payroll</span>
+            <i class="fas fa-chevron-right text-xs transition-transform" :class="open ? 'rotate-90' : ''"></i>
+        </button>
+        <div x-show="open" x-collapse class="ml-4 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
+            <?php sl('payroll.php',               'fa-calculator',       'Generate Payroll',    'payroll.php',               $current_uri); ?>
+            <?php sl('pay_history_management.php','fa-clock-rotate-left','Pay History',         'pay_history_management.php',$current_uri); ?>
+            <?php sl('ca_management.php',         'fa-hand-holding-dollar','CA/VALE',           'ca_management.php',         $current_uri); ?>
+            <?php sl('deduction_management.php',  'fa-minus-circle',     'Deductions',          'deduction_management.php',  $current_uri); ?>
+            <?php sl('overtime_management.php',   'fa-hourglass-half',   'Overtime',            'overtime_management.php',   $current_uri); ?>
+            <?php sl('allowance_management.php',  'fa-plus-circle',      'Allowances & Bonus',  'allowance_management.php',  $current_uri); ?>
+        </div>
+    </div>
+    <?php sl('my_payslips.php', 'fa-file-invoice-dollar', 'All Payslips', 'my_payslips.php', $current_uri); ?>
+
+    <?php
+    $is_leave_a = strpos($current_uri, 'manage_leave.php') !== false
+               || strpos($current_uri, 'leave_policy_management.php') !== false;
+    ?>
+    <div x-data="{ open: <?php echo $is_leave_a ? 'true' : 'false'; ?> }">
+        <button @click="open = !open" class="sidebar-link w-full <?php echo $is_leave_a ? 'active' : ''; ?>">
+            <i class="fas fa-umbrella-beach icon"></i><span class="flex-1 text-left">Leave</span>
+            <i class="fas fa-chevron-right text-xs transition-transform" :class="open ? 'rotate-90' : ''"></i>
+        </button>
+        <div x-show="open" x-collapse class="ml-4 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
+            <?php sl('manage_leave.php',           'fa-list-check',  'Review Requests', 'manage_leave.php',           $current_uri); ?>
+            <?php sl('leave_policy_management.php','fa-file-alt',    'Policy & Accrual','leave_policy_management.php',$current_uri); ?>
+        </div>
+    </div>
+
+    <p class="sidebar-section">Attendance</p>
+    <?php sl('time_attendance.php',          'fa-clock',   'Attendance Logs',      'time_attendance.php',          $current_uri); ?>
+    <?php sl('admin_attendance_requests.php','fa-pen-to-square','Adj. Requests',   'admin_attendance_requests.php',$current_uri); ?>
+
+    <p class="sidebar-section">Reporting</p>
+    <?php sl('reports.php',                 'fa-chart-line', 'Reports',            'reports.php',                  $current_uri); ?>
+    <?php sl('announcement_management.php', 'fa-bullhorn',   'Announcements',      'announcement_management.php',  $current_uri); ?>
+    <?php sl('holiday_management.php',      'fa-calendar-day','Holidays',          'holiday_management.php',       $current_uri); ?>
+
+    <p class="sidebar-section">My Account</p>
+    <?php sl('my_profile.php',  'fa-user',   'My Profile',   'my_profile.php',   $current_uri); ?>
+    <?php sl('kiosk.php',       'fa-camera', 'Open Kiosk',   '__never_match__',  $current_uri); ?>
+
+    <?php if ($is_super_admin): ?>
+        <p class="sidebar-section" style="color:#f87171">System</p>
+        <?php sl('global_settings.php',    'fa-gear',          'Global Settings',  'global_settings.php',    $current_uri, 'text-rose-300'); ?>
+        <?php sl('company_management.php', 'fa-building',      'Companies',        'company_management.php', $current_uri, 'text-rose-300'); ?>
+        <?php sl('database_backup.php',    'fa-database',      'DB Backup',        'database_backup.php',    $current_uri, 'text-rose-300'); ?>
+        <?php sl('database_restore.php',   'fa-rotate-left',   'DB Restore',       'database_restore.php',   $current_uri, 'text-rose-300'); ?>
+        <?php sl('audit_log_viewer.php',   'fa-clipboard-list','Audit Log',        'audit_log_viewer.php',   $current_uri, 'text-rose-300'); ?>
+    <?php endif; ?>
+
+<?php elseif ($is_manager): ?>
+
+    <?php sl('manager_dashboard.php', 'fa-house', 'Dashboard', 'manager_dashboard.php', $current_uri); ?>
+
+    <p class="sidebar-section">Team</p>
+    <?php
+    $is_team = strpos($current_uri, 'team_management.php') !== false
+            || strpos($current_uri, 'team_attendance_logs.php') !== false;
+    ?>
+    <div x-data="{ open: <?php echo $is_team ? 'true' : 'false'; ?> }">
+        <button @click="open = !open" class="sidebar-link w-full <?php echo $is_team ? 'active' : ''; ?>">
+            <i class="fas fa-users-gear icon"></i><span class="flex-1 text-left">Team Oversight</span>
+            <i class="fas fa-chevron-right text-xs transition-transform" :class="open ? 'rotate-90' : ''"></i>
+        </button>
+        <div x-show="open" x-collapse class="ml-4 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
+            <?php sl('team_management.php',     'fa-id-badge', 'Profiles / Pay Rates', 'team_management.php',     $current_uri); ?>
+            <?php sl('team_attendance_logs.php','fa-clock',    'Attendance Logs',      'team_attendance_logs.php',$current_uri); ?>
+        </div>
+    </div>
+    <?php sl('manage_leave.php',           'fa-umbrella-beach','Manage Leave',     'manage_leave.php',           $current_uri); ?>
+    <?php sl('announcement_management.php','fa-bullhorn',       'Announcements',    'announcement_management.php',$current_uri); ?>
+    <?php sl('log_journal.php',            'fa-trophy',         'Performance Mgt.', ['log_journal.php','my_journal.php'], $current_uri); ?>
+
+    <p class="sidebar-section">My Account</p>
+    <?php sl('my_profile.php',   'fa-user',                'My Profile',        'my_profile.php',   $current_uri); ?>
+    <?php sl('my_time_logs.php', 'fa-clock',               'My Time Logs',      'my_time_logs.php', $current_uri); ?>
+    <?php sl('my_payslips.php',  'fa-file-invoice-dollar', 'My Payslips',       'my_payslips.php',  $current_uri); ?>
+    <?php sl('my_ca_vale.php',   'fa-receipt',             'My CA/VALE',        'my_ca_vale.php',   $current_uri); ?>
+    <?php sl('my_leave.php',     'fa-umbrella-beach',      'My Leave Requests', 'my_leave.php',     $current_uri); ?>
+
+<?php elseif ($is_leave_manager): ?>
+
+    <?php sl('dashboard.php', 'fa-house', 'Dashboard', 'dashboard.php', $current_uri); ?>
+
+    <p class="sidebar-section">Leave</p>
+    <?php sl('manage_leave.php',            'fa-list-check', 'Review Requests', 'manage_leave.php',            $current_uri); ?>
+    <?php sl('leave_policy_management.php', 'fa-file-alt',   'Policy & Accrual', 'leave_policy_management.php', $current_uri); ?>
+
+    <p class="sidebar-section">Attendance</p>
+    <?php sl('admin_attendance_requests.php', 'fa-pen-to-square', 'Time Adjustments', 'admin_attendance_requests.php', $current_uri); ?>
+
+    <p class="sidebar-section">My Account</p>
+    <?php sl('my_profile.php',   'fa-user',                'My Profile',        'my_profile.php',   $current_uri); ?>
+    <?php sl('my_time_logs.php', 'fa-clock',               'My Time Logs',      'my_time_logs.php', $current_uri); ?>
+    <?php sl('my_payslips.php',  'fa-file-invoice-dollar', 'My Payslips',       'my_payslips.php',  $current_uri); ?>
+    <?php sl('my_ca_vale.php',   'fa-receipt',             'My CA/VALE',        'my_ca_vale.php',   $current_uri); ?>
+    <?php sl('my_leave.php',     'fa-umbrella-beach',      'My Leave Requests', 'my_leave.php',     $current_uri); ?>
+
+<?php else: ?>
+
+    <?php sl('dashboard.php',    'fa-house',                'My Dashboard',          'dashboard.php',    $current_uri); ?>
+
+    <p class="sidebar-section">My Work</p>
+    <?php sl('my_time_logs.php', 'fa-clock',               'My Time Logs',           'my_time_logs.php', $current_uri); ?>
+    <?php sl('my_payslips.php',  'fa-file-invoice-dollar', 'My Payslips',            'my_payslips.php',  $current_uri); ?>
+    <?php sl('my_ca_vale.php',   'fa-receipt',             'My CA/VALE',             'my_ca_vale.php',   $current_uri); ?>
+    <?php sl('my_leave.php',     'fa-umbrella-beach',      'My Leave Requests',      'my_leave.php',     $current_uri); ?>
+    <?php sl('my_journal.php',   'fa-book-open',           'My Performance Journal', 'my_journal.php',   $current_uri); ?>
+
+    <p class="sidebar-section">My Account</p>
+    <?php sl('my_profile.php',   'fa-user',    'My Profile',  'my_profile.php',   $current_uri); ?>
+
+<?php endif; ?>
+
+    <p class="sidebar-section">Quick Links</p>
+    <?php sl('my_qr_code.php',    'fa-qrcode',   'My QR Code',   'my_qr_code.php',    $current_uri); ?>
+    <?php sl('my_virtual_id.php', 'fa-id-card',  'Virtual ID',   'my_virtual_id.php', $current_uri); ?>
+    <?php sl('user_manual.php',   'fa-book-open','User Manual',   'user_manual.php',   $current_uri); ?>
+
+</nav>
+<?php
+$nav_html = ob_get_clean();
+?>
+
+<!-- Mobile slide-over sidebar -->
 <aside id="mobile-sidebar"
        x-cloak
        x-show="sidebarOpen"
        x-transition:enter="transition ease-out duration-200"
        x-transition:enter-start="-translate-x-full"
        x-transition:enter-end="translate-x-0"
-       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave="transition ease-in duration-150"
        x-transition:leave-start="translate-x-0"
        x-transition:leave-end="-translate-x-full"
-       class="fixed inset-y-0 left-0 z-30 w-72 max-w-full bg-gray-800 text-white p-6 overflow-y-auto md:hidden print-hide"
-       @keydown.escape.window="sidebarOpen = false"
->
-    <div class="flex justify-between items-center space-x-3 mb-8">
-        <div class="flex items-center space-x-3">
-            <?php
-            $sidebar_pic_src = !empty($_SESSION['profile_picture_url'])
-                ? '../' . htmlspecialchars($_SESSION['profile_picture_url'])
-                : 'https://placehold.co/40x40/667eea/ffffff?text=' . strtoupper(substr($_SESSION['username'] ?? 'U', 0, 1));
-            ?>
-            <img src="<?php echo $sidebar_pic_src; ?>" alt="Profile" class="h-10 w-10 rounded-full object-cover bg-indigo-400">
-            <span class="text-lg font-bold"><?php echo $is_super_admin ? 'Super Admin' : ($is_admin ? 'Admin Panel' : ($is_manager ? 'Manager Panel' : 'Employee Portal')); ?></span>
-        </div>
-
-        <button @click="sidebarOpen = false" class="text-gray-300 hover:text-white focus:outline-none">
-            <i class="fas fa-times text-2xl"></i>
-        </button>
-    </div>
-
-    <nav class="flex-grow">
-        <ul class="space-y-2">
-            <?php if ($is_admin || $is_super_admin): ?>
-                <li>
-                    <a href="admin_dashboard.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'admin_dashboard.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-home w-5 text-center"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-
-                <?php
-                $is_employee_page = (
-                    strpos($current_uri, 'employee_management.php') !== false ||
-                    strpos($current_uri, 'add_employee_page.php') !== false ||
-                    strpos($current_uri, 'view_employee_profile.php') !== false ||
-                    strpos($current_uri, 'edit_employee_page.php') !== false
-                );
-                ?>
-                <li>
-                    <a href="employee_management.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo $is_employee_page ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-users w-5 text-center"></i>
-                        <span>Employee Management</span>
-                    </a>
-                    <?php if ($is_employee_page): ?>
-                        <ul class="ml-4 mt-2 space-y-1 border-l border-gray-600">
-                            <li>
-                                <a href="employee_management.php" class="block px-4 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'employee_management.php') !== false) ? 'text-white' : 'text-gray-400 hover:text-white'; ?>">
-                                    Employee List
-                                </a>
-                            </li>
-                            <li>
-                                <a href="add_employee_page.php" class="block px-4 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'add_employee_page.php') !== false) ? 'text-white' : 'text-gray-400 hover:text-white'; ?>">
-                                    Add New Employee
-                                </a>
-                            </li>
-                            <?php if (strpos($current_uri, 'view_employee_profile.php') !== false): ?>
-                                <li>
-                                    <a href="#" class="block px-4 py-2 rounded-lg text-sm text-white">Viewing Profile</a>
-                                </li>
-                            <?php endif; ?>
-                            <?php if (strpos($current_uri, 'edit_employee_page.php') !== false): ?>
-                                <li>
-                                    <a href="#" class="block px-4 py-2 rounded-lg text-sm text-white">Editing Profile</a>
-                                </li>
-                            <?php endif; ?>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-
-                <li>
-                    <a href="department_management.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'department_management.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-building w-5 text-center"></i>
-                        <span>Department Mgt.</span>
-                    </a>
-                </li>
-
-                <?php
-                // MODIFIED: Added journal_management.php to the check
-                $is_journal_page_admin = (
-                    strpos($current_uri, 'log_journal.php') !== false ||
-                    strpos($current_uri, 'my_journal.php') !== false ||
-                    strpos($current_uri, 'journal_management.php') !== false
-                );
-                ?>
-                <li>
-                    <a href="log_journal.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo $is_journal_page_admin ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-trophy w-5 text-center"></i>
-                        <span>Performance Mgt.</span>
-                    </a>
-                    <?php if ($is_journal_page_admin): ?>
-                        <ul class="ml-8 mt-2 space-y-1 border-l border-gray-600">
-                            <li>
-                                <a href="log_journal.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'log_journal.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Log Journal Entry
-                                </a>
-                            </li>
-                            <li>
-                                <a href="my_journal.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'my_journal.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    My Journal (Admin View)
-                                </a>
-                            </li>
-                            <li>
-                                <a href="journal_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'journal_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Journal Management
-                                </a>
-                            </li>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-
-                <?php
-                $is_schedule_page = (
-                    strpos($current_uri, 'standard_schedule.php') !== false ||
-                    strpos($current_uri, 'schedule_management.php') !== false
-                );
-                $is_schedule_active = $is_schedule_page;
-                ?>
-                <li>
-                    <a href="standard_schedule.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo $is_schedule_active ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-calendar-alt w-5 text-center"></i>
-                        <span>Scheduling</span>
-                    </a>
-                    <?php if ($is_schedule_page): ?>
-                        <ul class="ml-8 mt-2 space-y-1 border-l border-gray-600">
-                            <li>
-                                <a href="standard_schedule.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'standard_schedule.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Standard Schedules
-                                </a>
-                            </li>
-                            <li>
-                                <a href="schedule_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'schedule_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Schedule Exceptions
-                                </a>
-                            </li>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-
-                <?php
-                $is_payroll_page = (
-                    strpos($current_uri, 'payroll.php') !== false ||
-                    strpos($current_uri, 'deduction_management.php') !== false ||
-                    strpos($current_uri, 'allowance_management.php') !== false ||
-                    strpos($current_uri, 'pay_history_management.php') !== false ||
-                    strpos($current_uri, 'ca_management.php') !== false
-                );
-                $is_payroll_active = $is_payroll_page;
-                ?>
-                <li>
-                    <a href="payroll.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo $is_payroll_active ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-dollar-sign w-5 text-center"></i>
-                        <span>Payroll</span>
-                    </a>
-                    <?php if ($is_payroll_page): ?>
-                        <ul class="ml-8 mt-2 space-y-1 border-l border-gray-600">
-                            <li>
-                                <a href="payroll.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'payroll.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Generate Payroll
-                                </a>
-                            </li>
-                            <li>
-                                <a href="pay_history_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'pay_history_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Pay History Mgt.
-                                </a>
-                            </li>
-                            <li>
-                                <a href="ca_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'ca_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    CA/VALE Management
-                                </a>
-                            </li>
-                            <li>
-                                <a href="deduction_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'deduction_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Deduction Management
-                                </a>
-                            </li>
-                            <li>
-                                <a href="overtime_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'overtime_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Overtime Management
-                                </a>
-                            </li>
-                            <li>
-                                <a href="allowance_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'allowance_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Allowance & Bonus Mgt.
-                                </a>
-                            </li>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-
-                <?php
-                $is_leave_admin_page = (
-                    strpos($current_uri, 'manage_leave.php') !== false ||
-                    strpos($current_uri, 'leave_policy_management.php') !== false
-                );
-                $is_leave_admin_active = $is_leave_admin_page;
-                ?>
-                <li>
-                    <a href="manage_leave.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo $is_leave_admin_active ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                        <i class="fas fa-plane w-5 text-center"></i>
-                        <span>Leave Management</span>
-                    </a>
-                    <?php if ($is_leave_admin_page): ?>
-                        <ul class="ml-8 mt-2 space-y-1 border-l border-gray-600">
-                            <li>
-                                <a href="manage_leave.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'manage_leave.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Review Requests
-                                </a>
-                            </li>
-                            <li>
-                                <a href="leave_policy_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'leave_policy_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Policy & Accrual
-                                </a>
-                            </li>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-
-                <li>
-                    <a href="my_payslips.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_payslips.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
-                        <span>All Payslips</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="time_attendance.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'time_attendance.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-clock w-5 text-center"></i>
-                        <span>Attendance Logs Mgt.</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="admin_attendance_requests.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'admin_attendance_requests.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-edit w-5 text-center"></i>
-                        <span>Adjustment Requests</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="reports.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'reports.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-chart-line w-5 text-center"></i>
-                        <span>Reports</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="announcement_management.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'announcement_management.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-bullhorn w-5 text-center"></i>
-                        <span>Announcement Mgt.</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="my_profile.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_profile.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-user w-5 text-center"></i>
-                        <span>My Profile</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="kiosk.php" target="_blank" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white">
-                        <i class="fas fa-camera w-5 text-center"></i>
-                        <span>Open Kiosk</span>
-                    </a>
-                </li>
-
-                <?php if ($is_super_admin): ?>
-                    <hr class="border-gray-600 my-4">
-                    <li>
-                        <a href="global_settings.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'global_settings.php') !== false) ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                            <i class="fas fa-cogs w-5 text-center"></i>
-                            <span>Global Settings</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="audit_log_viewer.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'audit_log_viewer.php') !== false) ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                            <i class="fas fa-clipboard-list w-5 text-center"></i>
-                            <span>Audit Log Viewer</span>
-                        </a>
-                    </li>
-                <?php endif; ?>
-
-            <?php elseif ($is_manager): ?>
-                <li>
-                    <a href="manager_dashboard.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'manager_dashboard.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-home w-5 text-center"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="log_journal.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'log_journal.php') !== false || strpos($current_uri, 'my_journal.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-trophy w-5 text-center"></i>
-                        <span>Performance Mgt.</span>
-                    </a>
-                </li>
-
-                <?php
-                // UPDATED: Use a single, more descriptive variable name for team active state
-                $is_team_oversight_active = (
-                    strpos($current_uri, 'team_management.php') !== false ||
-                    strpos($current_uri, 'team_attendance_logs.php') !== false
-                );
-                ?>
-                <li x-data="{ open: <?php echo $is_team_oversight_active ? 'true' : 'false'; ?> }">
-                    <button @click="open = !open" class="flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors <?php echo $is_team_oversight_active ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-users-cog w-5 text-center"></i>
-                        <span>Team Oversight</span>
-                        <i class="fas fa-chevron-down ml-auto text-sm transition-transform" :class="{ 'rotate-180': open }"></i>
-                    </button>
-                    <ul x-show="open" x-collapse class="ml-4 mt-2 space-y-1 border-l border-gray-600">
-                        <li>
-                            <a href="team_management.php" class="block px-4 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'team_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                Team Profiles / Pay Rates
-                            </a>
-                        </li>
-                        <li>
-                            <a href="team_attendance_logs.php" class="block px-4 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'team_attendance_logs.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                Team Attendance Logs
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li>
-                    <a href="manage_leave.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'manage_leave.php') !== false) ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                        <i class="fas fa-plane w-5 text-center"></i>
-                        <span>Manage Leave</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="announcement_management.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'announcement_management.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-bullhorn w-5 text-center"></i>
-                        <span>Announcement Mgt.</span>
-                    </a>
-                </li>
-
-                <hr class="border-gray-600 my-4">
-
-                <li>
-                    <a href="my_profile.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_profile.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-user w-5 text-center"></i>
-                        <span>My Profile</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_time_logs.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_time_logs.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-clock w-5 text-center"></i>
-                        <span>My Time Logs</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_payslips.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_payslips.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
-                        <span>My Payslips</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_ca_vale.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_ca_vale.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-receipt w-5 text-center"></i>
-                        <span>My CA/VALE</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_leave.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_leave.php') !== false) ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                        <i class="fas fa-plane w-5 text-center"></i>
-                        <span>My Leave Requests</span>
-                    </a>
-                </li>
-            <?php else: ?>
-                <li>
-                    <a href="dashboard.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'dashboard.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-home w-5 text-center"></i>
-                        <span>My Dashboard</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_profile.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_profile.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-user w-5 text-center"></i>
-                        <span>My Profile</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_time_logs.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_time_logs.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-clock w-5 text-center"></i>
-                        <span>My Time Logs</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_payslips.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_payslips.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
-                        <span>My Payslips</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_ca_vale.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_ca_vale.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-receipt w-5 text-center"></i>
-                        <span>My CA/VALE</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_journal.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_journal.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-book-open w-5 text-center"></i>
-                        <span>My Performance Journal</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_leave.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_leave.php') !== false) ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                        <i class="fas fa-plane w-5 text-center"></i>
-                        <span>My Leave Requests</span>
-                    </a>
-                </li>
-            <?php endif; ?>
-
-            <hr class="border-gray-600 my-4">
-
-            <li>
-                <a href="my_qr_code.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_qr_code.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                    <i class="fas fa-qrcode w-5 text-center"></i>
-                    <span>My QR Code</span>
-                </a>
-            </li>
-            <li>
-                <a href="my_virtual_id.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_virtual_id.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                    <i class="fas fa-id-card w-5 text-center"></i>
-                    <span>Virtual ID</span>
-                </a>
-            </li>
-        </ul>
-    </nav>
-
-    <div class="mt-auto pt-6">
-        <span class="text-gray-400 text-sm block">Logged in as:</span>
-        <span class="text-white font-medium block"><?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?></span>
-        <span class="text-gray-400 text-xs block"><?php echo htmlspecialchars($_SESSION['role'] ?? 'User'); ?></span>
-    </div>
+       class="fixed inset-y-0 left-0 z-30 w-72 flex flex-col md:hidden print-hide"
+       style="background: linear-gradient(180deg,#1e1b4b 0%,#312e81 100%);"
+       @keydown.escape.window="sidebarOpen = false">
+    <!-- Close btn -->
+    <button @click="sidebarOpen = false"
+            class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-indigo-300 hover:text-white hover:bg-white/10 focus:outline-none">
+        <i class="fas fa-times"></i>
+    </button>
+    <?php echo $nav_html; ?>
 </aside>
 
-<aside class="hidden md:flex md:flex-col md:w-72 md:shrink-0 bg-gray-800 text-white p-6 overflow-y-auto print-hide" aria-hidden="false">
-    <div class="flex justify-between items-center space-x-3 mb-8">
-        <div class="flex items-center space-x-3">
-            <?php
-            // We can re-use the $sidebar_pic_src variable defined for mobile
-            ?>
-            <img src="<?php echo $sidebar_pic_src; ?>" alt="Profile" class="h-10 w-10 rounded-full object-cover bg-indigo-400">
-            <span class="text-2xl font-bold"><?php echo $is_super_admin ? 'Super Admin' : ($is_admin ? 'Admin Panel' : ($is_manager ? 'Manager Panel' : 'Employee Portal')); ?></span>
-        </div>
-    </div>
-
-    <nav class="flex-grow">
-        <ul class="space-y-2">
-            <?php if ($is_admin || $is_super_admin): ?>
-                <li>
-                    <a href="admin_dashboard.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'admin_dashboard.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-home w-5 text-center"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-
-                <?php
-                $is_employee_page = (
-                    strpos($current_uri, 'employee_management.php') !== false ||
-                    strpos($current_uri, 'add_employee_page.php') !== false ||
-                    strpos($current_uri, 'view_employee_profile.php') !== false ||
-                    strpos($current_uri, 'edit_employee_page.php') !== false
-                );
-                ?>
-                <li>
-                    <a href="employee_management.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo $is_employee_page ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-users w-5 text-center"></i>
-                        <span>Employee Management</span>
-                    </a>
-                    <?php if ($is_employee_page): ?>
-                        <ul class="ml-4 mt-2 space-y-1 border-l border-gray-600">
-                            <li>
-                                <a href="employee_management.php" class="block px-4 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'employee_management.php') !== false) ? 'text-white' : 'text-gray-400 hover:text-white'; ?>">
-                                    Employee List
-                                </a>
-                            </li>
-                            <li>
-                                <a href="add_employee_page.php" class="block px-4 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'add_employee_page.php') !== false) ? 'text-white' : 'text-gray-400 hover:text-white'; ?>">
-                                    Add New Employee
-                                </a>
-                            </li>
-                            <?php if (strpos($current_uri, 'view_employee_profile.php') !== false): ?>
-                                <li>
-                                    <a href="#" class="block px-4 py-2 rounded-lg text-sm text-white">Viewing Profile</a>
-                                </li>
-                            <?php endif; ?>
-                            <?php if (strpos($current_uri, 'edit_employee_page.php') !== false): ?>
-                                <li>
-                                    <a href="#" class="block px-4 py-2 rounded-lg text-sm text-white">Editing Profile</a>
-                                </li>
-                            <?php endif; ?>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-
-                <li>
-                    <a href="department_management.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'department_management.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-building w-5 text-center"></i>
-                        <span>Department Mgt.</span>
-                    </a>
-                </li>
-
-                <?php
-                // MODIFIED: Added journal_management.php to the check
-                $is_journal_page_admin = (
-                    strpos($current_uri, 'log_journal.php') !== false ||
-                    strpos($current_uri, 'my_journal.php') !== false ||
-                    strpos($current_uri, 'journal_management.php') !== false
-                );
-                ?>
-                <li>
-                    <a href="log_journal.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo $is_journal_page_admin ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-trophy w-5 text-center"></i>
-                        <span>Performance Mgt.</span>
-                    </a>
-                    <?php if ($is_journal_page_admin): ?>
-                        <ul class="ml-8 mt-2 space-y-1 border-l border-gray-600">
-                            <li>
-                                <a href="log_journal.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'log_journal.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Log Journal Entry
-                                </a>
-                            </li>
-                            <li>
-                                <a href="my_journal.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'my_journal.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    My Journal (Admin View)
-                                </a>
-                            </li>
-                            <li>
-                                <a href="journal_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'journal_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Journal Management
-                                </a>
-                            </li>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-
-                <?php
-                $is_schedule_page = (
-                    strpos($current_uri, 'standard_schedule.php') !== false ||
-                    strpos($current_uri, 'schedule_management.php') !== false
-                );
-                $is_schedule_active = $is_schedule_page;
-                ?>
-                <li>
-                    <a href="standard_schedule.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo $is_schedule_active ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-calendar-alt w-5 text-center"></i>
-                        <span>Scheduling</span>
-                    </a>
-                    <?php if ($is_schedule_page): ?>
-                        <ul class="ml-8 mt-2 space-y-1 border-l border-gray-600">
-                            <li>
-                                <a href="standard_schedule.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'standard_schedule.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Standard Schedules
-                                </a>
-                            </li>
-                            <li>
-                                <a href="schedule_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'schedule_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Schedule Exceptions
-                                </a>
-                            </li>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-
-                <?php
-                $is_payroll_page = (
-                    strpos($current_uri, 'payroll.php') !== false ||
-                    strpos($current_uri, 'deduction_management.php') !== false ||
-                    strpos($current_uri, 'allowance_management.php') !== false ||
-                    strpos($current_uri, 'pay_history_management.php') !== false ||
-                    strpos($current_uri, 'ca_management.php') !== false
-                );
-                $is_payroll_active = $is_payroll_page;
-                ?>
-                <li>
-                    <a href="payroll.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo $is_payroll_active ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-dollar-sign w-5 text-center"></i>
-                        <span>Payroll</span>
-                    </a>
-                    <?php if ($is_payroll_page): ?>
-                        <ul class="ml-8 mt-2 space-y-1 border-l border-gray-600">
-                            <li>
-                                <a href="payroll.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'payroll.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Generate Payroll
-                                </a>
-                            </li>
-                            <li>
-                                <a href="pay_history_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'pay_history_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Pay History Mgt.
-                                </a>
-                            </li>
-                            <li>
-                                <a href="ca_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'ca_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    CA/VALE Management
-                                </a>
-                            </li>
-                            <li>
-                                <a href="deduction_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'deduction_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Deduction Management
-                                </a>
-                            </li>
-                            <li>
-                                <a href="overtime_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'overtime_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Overtime Management
-                                </a>
-                            </li>
-                            <li>
-                                <a href="allowance_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'allowance_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Allowance & Bonus Mgt.
-                                </a>
-                            </li>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-
-                <?php
-                $is_leave_admin_page = (
-                    strpos($current_uri, 'manage_leave.php') !== false ||
-                    strpos($current_uri, 'leave_policy_management.php') !== false
-                );
-                $is_leave_admin_active = $is_leave_admin_page;
-                ?>
-                <li>
-                    <a href="manage_leave.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo $is_leave_admin_active ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                        <i class="fas fa-plane w-5 text-center"></i>
-                        <span>Leave Management</span>
-                    </a>
-                    <?php if ($is_leave_admin_page): ?>
-                        <ul class="ml-8 mt-2 space-y-1 border-l border-gray-600">
-                            <li>
-                                <a href="manage_leave.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'manage_leave.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Review Requests
-                                </a>
-                            </li>
-                            <li>
-                                <a href="leave_policy_management.php" class="block pl-2 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'leave_policy_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                    Policy & Accrual
-                                </a>
-                            </li>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-
-                <li>
-                    <a href="my_payslips.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_payslips.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
-                        <span>All Payslips</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="time_attendance.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'time_attendance.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-clock w-5 text-center"></i>
-                        <span>Attendance Logs Mgt.</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="admin_attendance_requests.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'admin_attendance_requests.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-edit w-5 text-center"></i>
-                        <span>Adjustment Requests</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="reports.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'reports.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-chart-line w-5 text-center"></i>
-                        <span>Reports</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="announcement_management.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'announcement_management.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-bullhorn w-5 text-center"></i>
-                        <span>Announcement Mgt.</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="my_profile.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_profile.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-user w-5 text-center"></i>
-                        <span>My Profile</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="kiosk.php" target="_blank" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white">
-                        <i class="fas fa-camera w-5 text-center"></i>
-                        <span>Open Kiosk</span>
-                    </a>
-                </li>
-
-                <?php if ($is_super_admin): ?>
-                    <hr class="border-gray-600 my-4">
-                    <li>
-                        <a href="global_settings.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'global_settings.php') !== false) ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                            <i class="fas fa-cogs w-5 text-center"></i>
-                            <span>Global Settings</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="audit_log_viewer.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'audit_log_viewer.php') !== false) ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                            <i class="fas fa-clipboard-list w-5 text-center"></i>
-                            <span>Audit Log Viewer</span>
-                        </a>
-                    </li>
-                <?php endif; ?>
-
-            <?php elseif ($is_manager): ?>
-                <li>
-                    <a href="manager_dashboard.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'manager_dashboard.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-home w-5 text-center"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="log_journal.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'log_journal.php') !== false || strpos($current_uri, 'my_journal.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-trophy w-5 text-center"></i>
-                        <span>Performance Mgt.</span>
-                    </a>
-                </li>
-
-                <?php
-                // UPDATED: Use a single, more descriptive variable name for team active state
-                $is_team_oversight_active = (
-                    strpos($current_uri, 'team_management.php') !== false ||
-                    strpos($current_uri, 'team_attendance_logs.php') !== false
-                );
-                ?>
-                <li x-data="{ open: <?php echo $is_team_oversight_active ? 'true' : 'false'; ?> }">
-                    <button @click="open = !open" class="flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors <?php echo $is_team_oversight_active ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-users-cog w-5 text-center"></i>
-                        <span>Team Oversight</span>
-                        <i class="fas fa-chevron-down ml-auto text-sm transition-transform" :class="{ 'rotate-180': open }"></i>
-                    </button>
-                    <ul x-show="open" x-collapse class="ml-4 mt-2 space-y-1 border-l border-gray-600">
-                        <li>
-                            <a href="team_management.php" class="block px-4 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'team_management.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                Team Profiles / Pay Rates
-                            </a>
-                        </li>
-                        <li>
-                            <a href="team_attendance_logs.php" class="block px-4 py-2 rounded-lg text-sm <?php echo (strpos($current_uri, 'team_attendance_logs.php') !== false) ? 'text-white font-medium' : 'text-gray-400 hover:text-white'; ?>">
-                                Team Attendance Logs
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li>
-                    <a href="manage_leave.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'manage_leave.php') !== false) ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                        <i class="fas fa-plane w-5 text-center"></i>
-                        <span>Manage Leave</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="announcement_management.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'announcement_management.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-bullhorn w-5 text-center"></i>
-                        <span>Announcement Mgt.</span>
-                    </a>
-                </li>
-
-                <hr class="border-gray-600 my-4">
-
-                <li>
-                    <a href="my_profile.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_profile.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-user w-5 text-center"></i>
-                        <span>My Profile</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_time_logs.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_time_logs.php') !== false) ? 'bg-indigo-6Example (live example).600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-clock w-5 text-center"></i>
-                        <span>My Time Logs</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_payslips.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_payslips.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
-                        <span>My Payslips</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_ca_vale.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_ca_vale.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-receipt w-5 text-center"></i>
-                        <span>My CA/VALE</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_leave.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_leave.php') !== false) ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                        <i class="fas fa-plane w-5 text-center"></i>
-                        <span>My Leave Requests</span>
-                    </a>
-                </li>
-            <?php else: ?>
-                <li>
-                    <a href="dashboard.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'dashboard.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-home w-5 text-center"></i>
-                        <span>My Dashboard</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_profile.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_profile.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-user w-5 text-center"></i>
-                        <span>My Profile</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_time_logs.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_time_logs.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-clock w-5 text-center"></i>
-                        <span>My Time Logs</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_payslips.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_payslips.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
-                        <span>My Payslips</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_ca_vale.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_ca_vale.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-receipt w-5 text-center"></i>
-                        <span>My CA/VALE</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_journal.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_journal.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                        <i class="fas fa-book-open w-5 text-center"></i>
-                        <span>My Performance Journal</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="my_leave.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_leave.php') !== false) ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-700 hover:text-white'; ?>">
-                        <i class="fas fa-plane w-5 text-center"></i>
-                        <span>My Leave Requests</span>
-                    </a>
-                </li>
-            <?php endif; ?>
-
-            <hr class="border-gray-600 my-4">
-
-            <li>
-                <a href="my_qr_code.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_qr_code.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                    <i class="fas fa-qrcode w-5 text-center"></i>
-                    <span>My QR Code</span>
-                </a>
-            </li>
-            <li>
-                <a href="my_virtual_id.php" class="flex items-center space-x-3 px-4 py-3 rounded-lg <?php echo (strpos($current_uri, 'my_virtual_id.php') !== false) ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?>">
-                    <i class="fas fa-id-card w-5 text-center"></i>
-                    <span>Virtual ID</span>
-                </a>
-            </li>
-        </ul>
-    </nav>
-
-    <div class="mt-auto pt-6">
-        <span class="text-gray-400 text-sm hidden sm:inline">Logged in as:</span>
-        <span class="text-white font-medium block"><?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?></span>
-        <span class="text-gray-400 text-xs block"><?php echo htmlspecialchars($_SESSION['role'] ?? 'User'); ?></span>
-    </div>
+<!-- Desktop sidebar (always visible on md+) -->
+<aside class="hidden md:flex md:flex-col md:w-64 md:shrink-0 print-hide"
+       style="background: linear-gradient(180deg,#1e1b4b 0%,#312e81 100%);">
+    <?php echo $nav_html; ?>
 </aside>

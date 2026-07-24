@@ -5,7 +5,7 @@ include 'template/header.php';
 
 // Check permissions
 $user_role = $_SESSION['role'] ?? '';
-if (!in_array($user_role, ['Super Admin', 'HR Admin', 'Manager'])) {
+if (!in_array($user_role, ['Super Admin', 'HR Admin', 'Manager', 'Leave Manager'])) {
     echo "<div class='p-6 text-red-600'>You do not have permission to view this page.</div>";
     include 'template/footer.php';
     exit;
@@ -72,11 +72,41 @@ try {
                             <div class="text-xs text-gray-500">Requested: <?php echo date('M d, H:i', strtotime($req['created_at'])); ?></div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div class="text-green-600">In: <?php echo date('H:i', strtotime($req['time_in'])); ?></div>
-                            <div class="text-red-600">Out: <?php echo date('H:i', strtotime($req['time_out'])); ?></div>
+                            <?php
+                                // Extract request_type from reason prefix [type]
+                                $req_type = '';
+                                if (preg_match('/^\[([a-z_]+)\]/', $req['reason'], $tm)) {
+                                    $req_type = $tm[1];
+                                }
+                                $type_labels = [
+                                    'update_time_in'  => ['label' => 'Update Time In',  'color' => 'text-indigo-600'],
+                                    'update_time_out' => ['label' => 'Update Time Out', 'color' => 'text-emerald-600'],
+                                    'remove_time_in'  => ['label' => 'Remove Time In',  'color' => 'text-rose-600'],
+                                    'remove_time_out' => ['label' => 'Remove Time Out', 'color' => 'text-rose-600'],
+                                ];
+                                $tinfo = $type_labels[$req_type] ?? null;
+                            ?>
+                            <?php if ($tinfo): ?>
+                            <div class="font-medium <?php echo $tinfo['color']; ?>"><?php echo $tinfo['label']; ?></div>
+                            <?php endif; ?>
+                            <?php if (in_array($req_type, ['update_time_in','update_time_out','']) && $req['time_in']): ?>
+                            <div class="text-green-600 text-xs">In: <?php echo date('H:i', strtotime($req['time_in'])); ?></div>
+                            <?php endif; ?>
+                            <?php if (in_array($req_type, ['update_time_out','']) && $req['time_out']): ?>
+                            <div class="text-red-600 text-xs">Out: <?php echo date('H:i', strtotime($req['time_out'])); ?></div>
+                            <?php endif; ?>
+                            <?php if ($req['log_id']): ?>
+                            <div class="text-xs text-indigo-500 mt-0.5">Log #<?php echo (int)$req['log_id']; ?></div>
+                            <?php else: ?>
+                            <div class="text-xs text-gray-400 mt-0.5">No linked log</div>
+                            <?php endif; ?>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title="<?php echo htmlspecialchars($req['reason']); ?>">
-                            <?php echo htmlspecialchars($req['reason']); ?>
+                            <?php
+                                // Strip the [type] prefix for display
+                                $display_reason = preg_replace('/^\[[a-z_]+\]\s*/', '', $req['reason']);
+                                echo htmlspecialchars($display_reason);
+                            ?>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $statusColor; ?>">
